@@ -117,7 +117,21 @@ class DraggableMonitor(QWidget):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
+            new_pos = event.globalPosition().toPoint() - self._drag_pos
+            
+            # Constrain X axis
+            if new_pos.x() < 0:
+                new_pos.setX(0)
+            elif new_pos.x() > self.parent().width() - self.width():
+                new_pos.setX(self.parent().width() - self.width())
+                
+            # Constrain Y axis
+            if new_pos.y() < 0:
+                new_pos.setY(0)
+            elif new_pos.y() > self.parent().height() - self.height():
+                new_pos.setY(self.parent().height() - self.height())
+                
+            self.move(new_pos)
 
 class Sparkline(QWidget):
     def __init__(self, parent=None):

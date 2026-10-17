@@ -1,0 +1,86 @@
+from PyQt6.QtGui import QFontDatabase
+
+# Design Tokens
+BG = "#0A0A0A"
+SURFACE = "#141414"
+BORDER = "#262626"
+TEXT_PRIMARY = "#FAFAFA"
+TEXT_SECONDARY = "#8A8A8A"
+GOOD = "#22C55E"
+WARN = "#F59E0B"
+BAD = "#EF4444"
+
+# Thresholds
+PING_GOOD = 80
+PING_WARN = 200
+
+def load_fonts():
+    fonts = {
+        "Inter": "H:\\InternetMonitor\\assets\\fonts\\Inter-Regular.ttf",
+        "IBM Plex Mono": "H:\\InternetMonitor\\assets\\fonts\\IBMPlexMono-Regular.ttf"
+    }
+    for family, path in fonts.items():
+        try:
+            QFontDatabase.addApplicationFont(path)
+        except Exception as e:
+            print(f"Could not load font {family}: {e}")
+
+def build_stylesheet():
+    return f"""
+        QWidget#root {{
+            background-color: {BG};
+            border: 1px solid {BORDER};
+            border-radius: 12px;
+        }}
+        QLabel {{
+            color: {TEXT_SECONDARY};
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        QLabel#ValueLabel {{
+            color: {TEXT_PRIMARY};
+            font-family: 'IBM Plex Mono', 'Consolas', monospace;
+            font-size: 20px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0;
+        }}
+        QLabel#StatusDot {{
+            background-color: {TEXT_SECONDARY};
+            border-radius: 5px;
+            min-width: 10px;
+            max-width: 10px;
+            min-height: 10px;
+            max-height: 10px;
+        }}
+        QLabel#StatusDot[state="good"] {{
+            background-color: {GOOD};
+        }}
+        QLabel#StatusDot[state="warn"] {{
+            background-color: {WARN};
+        }}
+        QLabel#StatusDot[state="bad"] {{
+            background-color: {BAD};
+        }}
+        QLabel#ValueLabel[state="good"] {{
+            color: {GOOD};
+        }}
+        QLabel#ValueLabel[state="warn"] {{
+            color: {WARN};
+        }}
+        QLabel#ValueLabel[state="bad"] {{
+            color: {BAD};
+        }}
+        QPushButton#CloseBtn {{
+            background: transparent;
+            border: none;
+            color: {TEXT_SECONDARY};
+            font-size: 16px;
+            font-weight: normal;
+        }}
+        QPushButton#CloseBtn:hover {{
+            color: {TEXT_PRIMARY};
+        }}
+    """

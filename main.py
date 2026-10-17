@@ -11,23 +11,26 @@ class ExperimentWindow(QMainWindow):
         
         # 1. Required for transparency on most OS
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        # 2. Window frames often force an opaque background; remove it to see the effect
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        # 2. Use a flag that allows the native OS shadow to be drawn
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
 
         # Central Widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Set a semi-transparent background color
-        central_widget.setStyleSheet("background-color: rgba(0, 0, 0, 50);")
+        # Set background to semi-transparent black (adjust alpha as needed, e.g., 180 for dark but slightly see-through)
+        # Added a neon blue glow using a border and box-shadow effect via QSS
+        central_widget.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 180);
+                border: 2px solid #00f2ff;
+                border-radius: 0px;
+            }
+        """)
         
+        # Since QSS doesn't support true gaussian blur glows, 
+        # the neon effect is achieved with a bright cyan border.
         layout = QVBoxLayout(central_widget)
-
-        # Label
-        self.label = QLabel("Hello from the PyQt Experiment!", self)
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet("font-size: 18px; font-weight: bold;")
-        layout.addWidget(self.label)
 
     def on_button_click(self):
         pass
@@ -35,6 +38,5 @@ class ExperimentWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = ExperimentWindow()
-    window.setWindowState(Qt.WindowState.WindowMaximized)
-    window.show()
+    window.showFullScreen()
     sys.exit(app.exec())

@@ -9,8 +9,8 @@ TEXT_SECONDARY = "#8A8A8A"
 GOOD = "#22C55E"
 WARN = "#F59E0B"
 BAD = "#EF4444"
+NEON_BLUE = "#00f2ff"
 
-# Thresholds
 PING_GOOD = 80
 PING_WARN = 200
 
@@ -22,15 +22,14 @@ def load_fonts():
     for family, path in fonts.items():
         try:
             QFontDatabase.addApplicationFont(path)
-        except Exception as e:
-            print(f"Could not load font {family}: {e}")
+        except:
+            pass
 
-def build_stylesheet():
+def get_monitor_stylesheet():
     return f"""
-        QWidget#root {{
-            background-color: {BG};
-            border: 1px solid {BORDER};
-            border-radius: 12px;
+        QWidget {{
+            border: none;
+            background: transparent;
         }}
         QLabel {{
             color: {TEXT_SECONDARY};
@@ -38,6 +37,7 @@ def build_stylesheet():
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            border: none;
         }}
         QLabel#ValueLabel {{
             color: {TEXT_PRIMARY};
@@ -46,6 +46,7 @@ def build_stylesheet():
             font-weight: 600;
             text-transform: none;
             letter-spacing: 0;
+            border: none;
         }}
         QLabel#StatusDot {{
             background-color: {TEXT_SECONDARY};
@@ -54,33 +55,12 @@ def build_stylesheet():
             max-width: 10px;
             min-height: 10px;
             max-height: 10px;
-        }}
-        QLabel#StatusDot[state="good"] {{
-            background-color: {GOOD};
-        }}
-        QLabel#StatusDot[state="warn"] {{
-            background-color: {WARN};
-        }}
-        QLabel#StatusDot[state="bad"] {{
-            background-color: {BAD};
-        }}
-        QLabel#ValueLabel[state="good"] {{
-            color: {GOOD};
-        }}
-        QLabel#ValueLabel[state="warn"] {{
-            color: {WARN};
-        }}
-        QLabel#ValueLabel[state="bad"] {{
-            color: {BAD};
-        }}
-        QPushButton#CloseBtn {{
-            background: transparent;
             border: none;
-            color: {TEXT_SECONDARY};
-            font-size: 16px;
-            font-weight: normal;
         }}
-        QPushButton#CloseBtn:hover {{
-            color: {TEXT_PRIMARY};
-        }}
+        QLabel#StatusDot[state="good"] {{ background-color: {GOOD}; }}
+        QLabel#StatusDot[state="warn"] {{ background-color: {WARN}; }}
+        QLabel#StatusDot[state="bad"] {{ background-color: {BAD}; }}
+        QLabel#ValueLabel[state="good"] {{ color: {GOOD}; }}
+        QLabel#ValueLabel[state="warn"] {{ color: {WARN}; }}
+        QLabel#ValueLabel[state="bad"] {{ color: {BAD}; }}
     """

@@ -1,0 +1,12 @@
+{
+    "internet_monitor": {
+        "x": 100,
+        "y": 100
+    },
+    "monitors": {
+        "default": {
+            "x": 1640,
+            "y": 0
+        }
+    }
+}

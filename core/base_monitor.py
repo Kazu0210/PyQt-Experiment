@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt, QPoint
-from assets.theme import get_monitor_stylesheet
+from PyQt6.QtGui import QPainter, QPen, QColor
+from assets.theme import get_monitor_stylesheet, TEXT_PRIMARY
 import json
 import os
 
@@ -10,6 +11,7 @@ class BaseMonitor(QWidget):
     def __init__(self, parent=None, monitor_id="default"):
         super().__init__(parent)
         self.monitor_id = monitor_id
+        self.setObjectName(self.monitor_id)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(280, 180)
         self.setStyleSheet(get_monitor_stylesheet())
@@ -25,7 +27,24 @@ class BaseMonitor(QWidget):
         if hasattr(self, 'lock_btn'):
             self.lock_btn.setText("🔒" if self.is_locked else "🔓")
             self.lock_btn.setStyleSheet(f"background: transparent; color: {'#FAFAFA' if self.is_locked else '#8A8A8A'}; font-size: 12px; border: none;")
+        self.update_border()
         self.save_position()
+
+    def update_border(self):
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self.is_locked:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor(TEXT_PRIMARY))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 12, 12)
+
 
     def save_position(self):
         try:
@@ -68,6 +87,7 @@ class BaseMonitor(QWidget):
                         if hasattr(self, 'lock_btn'):
                             self.lock_btn.setText("🔒" if self.is_locked else "🔓")
                             self.lock_btn.setStyleSheet(f"background: transparent; color: {'#FAFAFA' if self.is_locked else '#8A8A8A'}; font-size: 12px; border: none;")
+                    self.update_border()
         except Exception as e:
             print(f"Error loading position: {e}")
 

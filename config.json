@@ -5,8 +5,19 @@
     },
     "monitors": {
         "default": {
+            "x": 496,
+            "y": 614,
+            "locked": false
+        },
+        "clock": {
+            "x": 0,
+            "y": 0,
+            "locked": true
+        },
+        "internet": {
             "x": 1640,
-            "y": 0
+            "y": 0,
+            "locked": true
         }
     }
 }

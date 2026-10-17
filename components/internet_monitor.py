@@ -4,8 +4,8 @@ from core.base_monitor import BaseMonitor
 from components.sparkline import Sparkline
 
 class InternetMonitor(BaseMonitor):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, monitor_id="internet"):
+        super().__init__(parent, monitor_id=monitor_id)
         
         # UI Layout
         self.dot = QLabel()

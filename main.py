@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 from assets.theme import load_fonts, NEON_BLUE, PING_GOOD, PING_WARN
 from core.network_worker import NetworkWorker
 from components.internet_monitor import InternetMonitor
+from components.clock_monitor import ClockMonitor
 
 class IntegratedExperiment(QMainWindow):
     def __init__(self):
@@ -22,19 +23,25 @@ class IntegratedExperiment(QMainWindow):
         self.main_layout = QVBoxLayout(self.shell)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Scalable approach: Monitor is now a separate component
-        self.internet_monitor = InternetMonitor()
-        self.internet_monitor.setParent(self.shell)
+        # Internet Monitor
+        self.internet_monitor = InternetMonitor(parent=self.shell, monitor_id="internet")
         self.internet_monitor.setup_metrics("PING", "DOWN", "UP")
-
-        # Load last position from config.json
         self.internet_monitor.load_position()
         
-        # If it's still at 0,0 or needs centering initially
         if self.internet_monitor.x() == 0 and self.internet_monitor.y() == 0:
             self.internet_monitor.move(
                 (self.shell.width() - self.internet_monitor.width()) // 2,
                 (self.shell.height() - self.internet_monitor.height()) // 2
+            )
+
+        # Clock Monitor
+        self.clock_monitor = ClockMonitor(parent=self.shell, monitor_id="clock")
+        self.clock_monitor.load_position()
+        
+        if self.clock_monitor.x() == 0 and self.clock_monitor.y() == 0:
+            self.clock_monitor.move(
+                (self.shell.width() - self.clock_monitor.width()) // 2,
+                (self.shell.height() - self.clock_monitor.height()) // 2 + 200
             )
 
         self.worker = NetworkWorker()

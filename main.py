@@ -81,6 +81,7 @@ class DraggableMonitor(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(280, 180)
         self.setStyleSheet(get_monitor_stylesheet())
+        self.is_locked = False
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
@@ -96,6 +97,13 @@ class DraggableMonitor(QWidget):
         top_row.addWidget(self.dot)
         top_row.addWidget(conn_label)
         top_row.addStretch()
+        
+        self.lock_btn = QPushButton("🔓")
+        self.lock_btn.setFixedSize(24, 24)
+        self.lock_btn.setStyleSheet("background: transparent; color: #8A8A8A; font-size: 12px; border: none;")
+        self.lock_btn.clicked.connect(self.toggle_lock)
+        top_row.addWidget(self.lock_btn)
+        
         self.layout.addLayout(top_row)
         
         metrics_row = QHBoxLayout()
@@ -111,11 +119,20 @@ class DraggableMonitor(QWidget):
         
         self._drag_pos = QPoint()
 
+    def toggle_lock(self):
+        self.is_locked = not self.is_locked
+        self.lock_btn.setText("🔒" if self.is_locked else "🔓")
+        self.lock_btn.setStyleSheet(f"background: transparent; color: {'#FAFAFA' if self.is_locked else '#8A8A8A'}; font-size: 12px; border: none;")
+
     def mousePressEvent(self, event):
+        if self.is_locked:
+            return
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event):
+        if self.is_locked:
+            return
         if event.buttons() == Qt.MouseButton.LeftButton:
             new_pos = event.globalPosition().toPoint() - self._drag_pos
             

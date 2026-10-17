@@ -1,23 +1,15 @@
 {
-    "internet_monitor": {
-        "x": 100,
-        "y": 100
-    },
     "monitors": {
-        "default": {
-            "x": 496,
-            "y": 614,
-            "locked": false
+        "internet": {
+            "x": 360,
+            "y": 0,
+            "locked": true
         },
         "clock": {
             "x": 0,
             "y": 0,
-            "locked": true
-        },
-        "internet": {
-            "x": 1640,
-            "y": 0,
-            "locked": true
+            "locked": true,
+            "use_24hr": false
         }
     }
 }

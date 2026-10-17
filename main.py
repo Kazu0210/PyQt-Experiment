@@ -1,8 +1,9 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 
 from assets.theme import load_fonts, NEON_BLUE, PING_GOOD, PING_WARN
+from core.base_monitor import BaseMonitor
 from core.network_worker import NetworkWorker
 from components.internet_monitor import InternetMonitor
 from components.clock_monitor import ClockMonitor
@@ -28,25 +29,35 @@ class IntegratedExperiment(QMainWindow):
         self.internet_monitor.setup_metrics("PING", "DOWN", "UP")
         self.internet_monitor.load_position()
         
-        if self.internet_monitor.x() == 0 and self.internet_monitor.y() == 0:
-            self.internet_monitor.move(
+        if not self.internet_monitor.position_loaded:
+            pos = QPoint(
                 (self.shell.width() - self.internet_monitor.width()) // 2,
-                (self.shell.height() - self.internet_monitor.height()) // 2
+                (self.shell.height() - self.internet_monitor.height()) // 2,
             )
+            self.internet_monitor.move(self.internet_monitor._avoid_overlaps(pos))
 
         # Clock Monitor
         self.clock_monitor = ClockMonitor(parent=self.shell, monitor_id="clock")
         self.clock_monitor.load_position()
         
-        if self.clock_monitor.x() == 0 and self.clock_monitor.y() == 0:
-            self.clock_monitor.move(
+        if not self.clock_monitor.position_loaded:
+            pos = QPoint(
                 (self.shell.width() - self.clock_monitor.width()) // 2,
-                (self.shell.height() - self.clock_monitor.height()) // 2 + 200
+                (self.shell.height() - self.clock_monitor.height()) // 2 + 200,
             )
+            self.clock_monitor.move(self.clock_monitor._avoid_overlaps(pos))
+
+        BaseMonitor.save_all(self.shell)
 
         self.worker = NetworkWorker()
         self.worker.status_updated.connect(self.update_metrics)
         self.worker.start()
+
+    def closeEvent(self, event):
+        BaseMonitor.save_all(self.shell)
+        self.worker.terminate()
+        self.worker.wait(1000)
+        event.accept()
 
     def update_metrics(self, online, ping, timestamp):
         state = "good" if online and ping < PING_GOOD else "warn" if online and ping < PING_WARN else "bad"

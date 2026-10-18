@@ -8,6 +8,27 @@ import os
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(_PROJECT_ROOT, "config.json")
 
+
+def _read_config():
+    if not os.path.exists(CONFIG_PATH):
+        return {}
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            raw = f.read().strip()
+        if not raw:
+            return {}
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Error reading config: {e}")
+        return {}
+
+
+def _write_config(config):
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4)
+
+
 class BaseMonitor(QWidget):
     def __init__(self, parent=None, monitor_id="default"):
         super().__init__(parent)
@@ -18,10 +39,10 @@ class BaseMonitor(QWidget):
         self.setStyleSheet(get_monitor_stylesheet())
         self.is_locked = False
         self.position_loaded = False
-        
+
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
-        
+
         self._drag_pos = QPoint()
         self._dragging = False
 
@@ -29,7 +50,10 @@ class BaseMonitor(QWidget):
         self.is_locked = not self.is_locked
         if hasattr(self, 'lock_btn'):
             self.lock_btn.setText("🔒" if self.is_locked else "🔓")
-            self.lock_btn.setStyleSheet(f"background: transparent; color: {'#FAFAFA' if self.is_locked else '#8A8A8A'}; font-size: 12px; border: none;")
+            self.lock_btn.setStyleSheet(
+                f"background: transparent; color: {'#FAFAFA' if self.is_locked else '#8A8A8A'}; "
+                f"font-size: 12px; border: none;"
+            )
         self.update_border()
         self.save_all_positions()
 
@@ -62,9 +86,13 @@ class BaseMonitor(QWidget):
             return []
         return [w for w in root.findChildren(BaseMonitor) if w.parent() is root]
 
+    def _parent_ready(self) -> bool:
+        parent = self.parent()
+        return parent is not None and parent.width() > self.width() and parent.height() > self.height()
+
     def _constrain_to_parent(self, pos: QPoint) -> QPoint:
         parent = self.parent()
-        if parent is None:
+        if parent is None or not self._parent_ready():
             return pos
         max_x = max(0, parent.width() - self.width())
         max_y = max(0, parent.height() - self.height())
@@ -72,6 +100,8 @@ class BaseMonitor(QWidget):
 
     def _avoid_overlaps(self, pos: QPoint) -> QPoint:
         """Push pos so this monitor does not overlap sibling monitors."""
+        if not self._parent_ready():
+            return pos
         for _ in range(16):
             proposed = QRect(pos.x(), pos.y(), self.width(), self.height())
             collided = False
@@ -106,22 +136,16 @@ class BaseMonitor(QWidget):
     def save_all(cls, root):
         """Write every monitor container under root into config.json."""
         try:
-            config = {}
-            if os.path.exists(CONFIG_PATH):
-                with open(CONFIG_PATH, "r") as f:
-                    config = json.load(f)
-
+            config = _read_config()
             monitors = {}
             for monitor in cls.monitors_in(root):
                 monitors[monitor.monitor_id] = monitor.to_config()
 
             config["monitors"] = monitors
-            # Drop legacy single-monitor keys
             for legacy in ("internet_monitor", "clock_monitor", "default", "bluetooth"):
                 config.pop(legacy, None)
 
-            with open(CONFIG_PATH, "w") as f:
-                json.dump(config, f, indent=4)
+            _write_config(config)
         except Exception as e:
             print(f"Error saving positions: {e}")
 
@@ -135,12 +159,12 @@ class BaseMonitor(QWidget):
     def apply_config(self, data):
         if "x" in data and "y" in data:
             resolved = self._avoid_overlaps(
-                self._constrain_to_parent(QPoint(data["x"], data["y"]))
+                self._constrain_to_parent(QPoint(int(data["x"]), int(data["y"])))
             )
             self.move(resolved)
             self.position_loaded = True
         if "locked" in data:
-            self.is_locked = data["locked"]
+            self.is_locked = bool(data["locked"])
             if hasattr(self, 'lock_btn'):
                 self.lock_btn.setText("🔒" if self.is_locked else "🔓")
                 self.lock_btn.setStyleSheet(
@@ -154,17 +178,12 @@ class BaseMonitor(QWidget):
 
     def load_position(self):
         try:
-            if not os.path.exists(CONFIG_PATH):
-                return
-            with open(CONFIG_PATH, "r") as f:
-                config = json.load(f)
-
+            config = _read_config()
             data = None
             monitors = config.get("monitors", {})
             if self.monitor_id in monitors:
                 data = monitors[self.monitor_id]
             elif self.monitor_id == "devices" and "bluetooth" in monitors:
-                # Migrated from the old bluetooth-only monitor
                 data = monitors["bluetooth"]
             elif self.monitor_id in config:
                 data = config[self.monitor_id]
@@ -180,6 +199,7 @@ class BaseMonitor(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self._dragging = True
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
 
     def mouseMoveEvent(self, event):
         if self.is_locked or not self._dragging:
@@ -189,8 +209,10 @@ class BaseMonitor(QWidget):
             new_pos = self._constrain_to_parent(new_pos)
             new_pos = self._avoid_overlaps(new_pos)
             self.move(new_pos)
+            event.accept()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self._dragging:
             self._dragging = False
             self.save_all_positions()
+            event.accept()

@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 
 from assets.theme import load_fonts, NEON_BLUE, PING_GOOD, PING_WARN
 from core.base_monitor import BaseMonitor
@@ -15,6 +15,7 @@ class IntegratedExperiment(QMainWindow):
         super().__init__()
         load_fonts()
         self.setWindowTitle("Pulse Integrated Experiment")
+        self._layout_restored = False
         
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
@@ -26,41 +27,12 @@ class IntegratedExperiment(QMainWindow):
         self.main_layout = QVBoxLayout(self.shell)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Internet Monitor
         self.internet_monitor = InternetMonitor(parent=self.shell, monitor_id="internet")
         self.internet_monitor.setup_metrics("PING", "DOWN", "UP")
-        self.internet_monitor.load_position()
-        
-        if not self.internet_monitor.position_loaded:
-            pos = QPoint(
-                (self.shell.width() - self.internet_monitor.width()) // 2,
-                (self.shell.height() - self.internet_monitor.height()) // 2,
-            )
-            self.internet_monitor.move(self.internet_monitor._avoid_overlaps(pos))
 
-        # Clock Monitor
         self.clock_monitor = ClockMonitor(parent=self.shell, monitor_id="clock")
-        self.clock_monitor.load_position()
-        
-        if not self.clock_monitor.position_loaded:
-            pos = QPoint(
-                (self.shell.width() - self.clock_monitor.width()) // 2,
-                (self.shell.height() - self.clock_monitor.height()) // 2 + 200,
-            )
-            self.clock_monitor.move(self.clock_monitor._avoid_overlaps(pos))
 
-        # Connected Devices Monitor (Bluetooth / USB receiver / USB)
         self.devices_monitor = DevicesMonitor(parent=self.shell, monitor_id="devices")
-        self.devices_monitor.load_position()
-
-        if not self.devices_monitor.position_loaded:
-            pos = QPoint(
-                (self.shell.width() - self.devices_monitor.width()) // 2,
-                (self.shell.height() - self.devices_monitor.height()) // 2 + 400,
-            )
-            self.devices_monitor.move(self.devices_monitor._avoid_overlaps(pos))
-
-        BaseMonitor.save_all(self.shell)
 
         self.worker = NetworkWorker()
         self.worker.status_updated.connect(self.update_metrics)
@@ -69,6 +41,33 @@ class IntegratedExperiment(QMainWindow):
         self.device_worker = DeviceWorker()
         self.device_worker.devices_updated.connect(self.devices_monitor.update_devices)
         self.device_worker.start()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._layout_restored:
+            # Wait until the fullscreen shell has a real size before loading/saving.
+            QTimer.singleShot(0, self.restore_monitor_layout)
+
+    def restore_monitor_layout(self):
+        if self._layout_restored:
+            return
+        self._layout_restored = True
+
+        placements = (
+            (self.internet_monitor, 0),
+            (self.clock_monitor, 200),
+            (self.devices_monitor, 400),
+        )
+        for monitor, y_offset in placements:
+            monitor.load_position()
+            if not monitor.position_loaded:
+                pos = QPoint(
+                    (self.shell.width() - monitor.width()) // 2,
+                    (self.shell.height() - monitor.height()) // 2 + y_offset,
+                )
+                monitor.move(monitor._avoid_overlaps(pos))
+
+        BaseMonitor.save_all(self.shell)
 
     def closeEvent(self, event):
         BaseMonitor.save_all(self.shell)
@@ -83,7 +82,6 @@ class IntegratedExperiment(QMainWindow):
     def update_metrics(self, online, ping, timestamp):
         state = "good" if online and ping < PING_GOOD else "warn" if online and ping < PING_WARN else "bad"
         
-        # Update the dot and ping label
         for w in [self.internet_monitor.dot, self.internet_monitor.ping_val]:
             if w:
                 w.setProperty("state", state)

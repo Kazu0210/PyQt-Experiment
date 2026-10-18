@@ -26,8 +26,10 @@ class DevicesMonitor(BaseMonitor):
         self.dot = QLabel()
         self.dot.setObjectName("StatusDot")
         self.dot.setFixedSize(10, 10)
+        self.dot.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         title = QLabel("DEVICES")
+        title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         top_row = QHBoxLayout()
         top_row.addWidget(self.dot)
@@ -44,6 +46,7 @@ class DevicesMonitor(BaseMonitor):
         self.layout.addLayout(top_row)
 
         count_block = QWidget()
+        count_block.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         count_layout = QVBoxLayout(count_block)
         count_layout.setContentsMargins(0, 0, 0, 0)
         count_layout.setSpacing(2)

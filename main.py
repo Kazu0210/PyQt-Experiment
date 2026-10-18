@@ -7,6 +7,8 @@ from core.base_monitor import BaseMonitor
 from core.network_worker import NetworkWorker
 from components.internet_monitor import InternetMonitor
 from components.clock_monitor import ClockMonitor
+from components.devices_monitor import DevicesMonitor
+from core.device_worker import DeviceWorker
 
 class IntegratedExperiment(QMainWindow):
     def __init__(self):
@@ -47,14 +49,33 @@ class IntegratedExperiment(QMainWindow):
             )
             self.clock_monitor.move(self.clock_monitor._avoid_overlaps(pos))
 
+        # Connected Devices Monitor (Bluetooth / USB receiver / USB)
+        self.devices_monitor = DevicesMonitor(parent=self.shell, monitor_id="devices")
+        self.devices_monitor.load_position()
+
+        if not self.devices_monitor.position_loaded:
+            pos = QPoint(
+                (self.shell.width() - self.devices_monitor.width()) // 2,
+                (self.shell.height() - self.devices_monitor.height()) // 2 + 400,
+            )
+            self.devices_monitor.move(self.devices_monitor._avoid_overlaps(pos))
+
         BaseMonitor.save_all(self.shell)
 
         self.worker = NetworkWorker()
         self.worker.status_updated.connect(self.update_metrics)
         self.worker.start()
 
+        self.device_worker = DeviceWorker()
+        self.device_worker.devices_updated.connect(self.devices_monitor.update_devices)
+        self.device_worker.start()
+
     def closeEvent(self, event):
         BaseMonitor.save_all(self.shell)
+        self.device_worker.stop()
+        if not self.device_worker.wait(5000):
+            self.device_worker.terminate()
+            self.device_worker.wait(1000)
         self.worker.terminate()
         self.worker.wait(1000)
         event.accept()

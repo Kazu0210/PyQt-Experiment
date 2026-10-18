@@ -10,6 +10,11 @@
             "y": 0,
             "locked": true,
             "use_24hr": false
+        },
+        "devices": {
+            "x": 640,
+            "y": 0,
+            "locked": true
         }
     }
 }

@@ -117,7 +117,7 @@ class BaseMonitor(QWidget):
 
             config["monitors"] = monitors
             # Drop legacy single-monitor keys
-            for legacy in ("internet_monitor", "clock_monitor", "default"):
+            for legacy in ("internet_monitor", "clock_monitor", "default", "bluetooth"):
                 config.pop(legacy, None)
 
             with open(CONFIG_PATH, "w") as f:
@@ -160,8 +160,12 @@ class BaseMonitor(QWidget):
                 config = json.load(f)
 
             data = None
-            if "monitors" in config and self.monitor_id in config["monitors"]:
-                data = config["monitors"][self.monitor_id]
+            monitors = config.get("monitors", {})
+            if self.monitor_id in monitors:
+                data = monitors[self.monitor_id]
+            elif self.monitor_id == "devices" and "bluetooth" in monitors:
+                # Migrated from the old bluetooth-only monitor
+                data = monitors["bluetooth"]
             elif self.monitor_id in config:
                 data = config[self.monitor_id]
 

@@ -48,6 +48,15 @@ def get_monitor_stylesheet():
             letter-spacing: 0;
             border: none;
         }}
+        QLabel#DeviceLabel {{
+            color: {TEXT_PRIMARY};
+            font-family: 'IBM Plex Mono', 'Consolas', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            border: none;
+        }}
         QLabel#StatusDot {{
             background-color: {TEXT_SECONDARY};
             border-radius: 5px;

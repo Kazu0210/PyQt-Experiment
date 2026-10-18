@@ -58,18 +58,32 @@ class DeviceWorker(QThread):
         super().__init__(parent)
         self.poll_ms = poll_ms
         self._running = True
+        self._proc = None
 
     def stop(self):
         self._running = False
+        proc = self._proc
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.kill()
+            except Exception:
+                pass
 
     def run(self):
         while self._running:
             self.devices_updated.emit(self.list_connected())
-            self.msleep(self.poll_ms)
+            # Sleep in short slices so stop() can exit quickly
+            remaining = self.poll_ms
+            while self._running and remaining > 0:
+                step = min(200, remaining)
+                self.msleep(step)
+                remaining -= step
 
     def list_connected(self):
+        if not self._running:
+            return []
         try:
-            result = subprocess.run(
+            self._proc = subprocess.Popen(
                 [
                     "powershell",
                     "-NoProfile",
@@ -77,15 +91,25 @@ class DeviceWorker(QThread):
                     "-Command",
                     _PS_LIST_DEVICES,
                 ],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=45,
                 creationflags=_CREATE_NO_WINDOW,
             )
-            if result.returncode != 0 or not result.stdout.strip():
+            try:
+                stdout, _ = self._proc.communicate(timeout=45)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+                self._proc.communicate()
                 return []
-            return self._parse_devices(result.stdout)
+            finally:
+                self._proc = None
+
+            if not stdout or not stdout.strip():
+                return []
+            return self._parse_devices(stdout)
         except Exception:
+            self._proc = None
             return []
 
     def _parse_devices(self, raw: str):

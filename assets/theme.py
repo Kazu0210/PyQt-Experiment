@@ -1,3 +1,4 @@
+import os
 from PyQt6.QtGui import QFontDatabase
 
 # Design Tokens
@@ -14,16 +15,18 @@ NEON_BLUE = "#00f2ff"
 PING_GOOD = 80
 PING_WARN = 200
 
+_ASSETS_DIR = os.path.dirname(os.path.abspath(__file__))
+_FONTS_DIR = os.path.join(_ASSETS_DIR, "fonts")
+
 def load_fonts():
-    fonts = {
-        "Inter": "H:\\InternetMonitor\\assets\\fonts\\Inter-Regular.ttf",
-        "IBM Plex Mono": "H:\\InternetMonitor\\assets\\fonts\\IBMPlexMono-Regular.ttf"
-    }
-    for family, path in fonts.items():
-        try:
+    fonts = (
+        "Inter-Regular.ttf",
+        "IBMPlexMono-Regular.ttf",
+    )
+    for filename in fonts:
+        path = os.path.join(_FONTS_DIR, filename)
+        if os.path.isfile(path):
             QFontDatabase.addApplicationFont(path)
-        except:
-            pass
 
 def get_monitor_stylesheet():
     return f"""

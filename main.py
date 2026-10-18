@@ -73,11 +73,11 @@ class IntegratedExperiment(QMainWindow):
     def closeEvent(self, event):
         BaseMonitor.save_all(self.shell)
         self.device_worker.stop()
-        if not self.device_worker.wait(5000):
+        if not self.device_worker.wait(1500):
             self.device_worker.terminate()
-            self.device_worker.wait(1000)
+            self.device_worker.wait(500)
         self.worker.terminate()
-        self.worker.wait(1000)
+        self.worker.wait(500)
         event.accept()
 
     def update_metrics(self, online, ping, timestamp):

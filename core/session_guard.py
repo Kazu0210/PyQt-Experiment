@@ -25,9 +25,10 @@ VK_RWIN = 0x5C
 _KEY_EVENTS = (WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP)
 
 
-def should_block_key(vk, alt, ctrl, shift):
+def should_block_key(vk, alt, ctrl, shift, win=False):
     """Keys that leave or close the app while it is locked."""
-    if vk in (VK_LWIN, VK_RWIN):
+    # Any Windows-key chord, including Win+Ctrl+Left/Right and Win+Tab.
+    if vk in (VK_LWIN, VK_RWIN) or win:
         return True
     if alt and vk in (VK_TAB, VK_ESCAPE, VK_F4, VK_SPACE):
         return True
@@ -43,6 +44,8 @@ class SessionGuard:
         self._hook = None
         self._proc = None
         self._user32 = None
+        self._vdm = None
+        self._guid_type = None
 
     @property
     def active(self):
@@ -53,6 +56,81 @@ class SessionGuard:
             self._install()
         else:
             self._remove()
+
+    def hold_on_current_desktop(self, hwnd):
+        """Follow a virtual-desktop change so the lock stays on the visible desktop."""
+        if sys.platform != "win32" or not hwnd or not self._ensure_vdm():
+            return
+        vtable = ctypes.cast(self._vdm, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)))[0]
+        is_on = ctypes.WINFUNCTYPE(
+            ctypes.c_long, ctypes.c_void_p, wintypes.HWND, ctypes.POINTER(wintypes.BOOL)
+        )(vtable[3])
+        get_id = ctypes.WINFUNCTYPE(
+            ctypes.c_long, ctypes.c_void_p, wintypes.HWND, ctypes.POINTER(self._guid_type)
+        )(vtable[4])
+        move = ctypes.WINFUNCTYPE(
+            ctypes.c_long, ctypes.c_void_p, wintypes.HWND, ctypes.POINTER(self._guid_type)
+        )(vtable[5])
+
+        on_current = wintypes.BOOL()
+        if is_on(self._vdm, wintypes.HWND(hwnd), ctypes.byref(on_current)) != 0 or on_current:
+            return
+
+        user32 = self._user32 or ctypes.WinDLL("user32", use_last_error=True)
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        foreground = user32.GetForegroundWindow()
+        if not foreground or foreground == wintypes.HWND(hwnd):
+            return
+        desktop = self._guid_type()
+        if get_id(self._vdm, foreground, ctypes.byref(desktop)) != 0:
+            return
+        move(self._vdm, wintypes.HWND(hwnd), ctypes.byref(desktop))
+
+    def _ensure_vdm(self):
+        if self._vdm:
+            return True
+        ole32 = ctypes.WinDLL("ole32", use_last_error=True)
+        ole32.CoInitializeEx.argtypes = [ctypes.c_void_p, wintypes.DWORD]
+        ole32.CoInitializeEx.restype = ctypes.c_long
+        ole32.CoInitializeEx(None, 0x2)  # COINIT_APARTMENTTHREADED
+
+        class GUID(ctypes.Structure):
+            _fields_ = [
+                ("Data1", wintypes.DWORD),
+                ("Data2", wintypes.WORD),
+                ("Data3", wintypes.WORD),
+                ("Data4", wintypes.BYTE * 8),
+            ]
+
+        ole32.CLSIDFromString.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(GUID)]
+        ole32.CLSIDFromString.restype = ctypes.c_long
+
+        def make_guid(text):
+            value = GUID()
+            if ole32.CLSIDFromString(text, ctypes.byref(value)) != 0:
+                return None
+            return value
+
+        clsid = make_guid("{aa509086-5ca9-4c25-8f95-589d3c07b48a}")
+        iid = make_guid("{a5cd92ff-29be-454c-8d04-d82879fb3f1b}")
+        if clsid is None or iid is None:
+            return False
+
+        obj = ctypes.c_void_p()
+        ole32.CoCreateInstance.argtypes = [
+            ctypes.POINTER(GUID),
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.POINTER(GUID),
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        ole32.CoCreateInstance.restype = ctypes.c_long
+        hr = ole32.CoCreateInstance(ctypes.byref(clsid), None, 23, ctypes.byref(iid), ctypes.byref(obj))
+        if hr != 0 or not obj:
+            return False
+        self._guid_type = GUID
+        self._vdm = obj
+        return True
 
     def force_foreground(self, hwnd):
         if sys.platform != "win32" or not hwnd or self._user32 is None:
@@ -127,7 +205,8 @@ class SessionGuard:
             if n_code == 0 and w_param in _KEY_EVENTS:
                 info = ctypes.cast(l_param, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
                 alt = bool(info.flags & LLKHF_ALTDOWN) or pressed(VK_MENU)
-                if should_block_key(info.vkCode, alt, pressed(VK_CONTROL), pressed(VK_SHIFT)):
+                win = pressed(VK_LWIN) or pressed(VK_RWIN)
+                if should_block_key(info.vkCode, alt, pressed(VK_CONTROL), pressed(VK_SHIFT), win):
                     return 1
             return user32.CallNextHookEx(None, n_code, w_param, l_param)
 

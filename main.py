@@ -128,7 +128,8 @@ class IntegratedExperiment(QMainWindow):
             modifiers = event.modifiers()
             alt = bool(modifiers & Qt.KeyboardModifier.AltModifier)
             ctrl = bool(modifiers & Qt.KeyboardModifier.ControlModifier)
-            if key in (Qt.Key.Key_Meta, Qt.Key.Key_Super_L, Qt.Key.Key_Super_R):
+            meta = bool(modifiers & Qt.KeyboardModifier.MetaModifier)
+            if key in (Qt.Key.Key_Meta, Qt.Key.Key_Super_L, Qt.Key.Key_Super_R) or meta:
                 return True
             if alt and key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab, Qt.Key.Key_F4, Qt.Key.Key_Escape, Qt.Key.Key_Space):
                 return True
@@ -162,6 +163,7 @@ class IntegratedExperiment(QMainWindow):
     def _reclaim_foreground(self):
         if not self._locked:
             return
+        self._guard.hold_on_current_desktop(int(self.winId()))
         if self.isMinimized() or not self.isActiveWindow():
             self.setWindowState(Qt.WindowState.WindowFullScreen)
             self.showFullScreen()

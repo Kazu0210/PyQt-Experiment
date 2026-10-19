@@ -9,7 +9,7 @@
             "x": 0,
             "y": 0,
             "locked": true,
-            "use_24hr": false
+            "use_24hr": true
         },
         "devices": {
             "x": 1236,

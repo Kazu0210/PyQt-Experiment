@@ -1,8 +1,8 @@
 {
     "monitors": {
         "internet": {
-            "x": 360,
-            "y": 0,
+            "x": 1256,
+            "y": 684,
             "locked": true
         },
         "clock": {
@@ -12,9 +12,12 @@
             "use_24hr": false
         },
         "devices": {
-            "x": 640,
-            "y": 0,
+            "x": 1236,
+            "y": 444,
             "locked": true
         }
+    },
+    "lock": {
+        "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
     }
 }
